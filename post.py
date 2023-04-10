@@ -17,7 +17,7 @@ from pathlib import Path
 openai.api_key = os.getenv("OPENAI_API_KEY") # Set your OpenAI API key here, retrieve from PATH
 
 class Post:
-    def __init__(self, is_educational=False):
+    def __init__(self, is_educational = False):
         self.is_educational = is_educational
         self.news_headline = None
         self.image_prompt = None
@@ -27,12 +27,9 @@ class Post:
         self.image_path = None
 
         if self.is_educational:
-            self._generate_educational_content()
+            self._generate_educational_post()
         else:
-            self._generate_headline()
-            self._generate_image_prompt()
-            self._generate_post_description()
-            self._generate_image()
+            self._generate_post()
 
         if self.news_headline is None or self.image_prompt is None or self.post_description is None or self.image is None:
             raise ValueError("Failed to generate content")
@@ -54,6 +51,22 @@ class Post:
             print(f"Error generating headline: {e}")
             self.news_headline = None
 
+    def _generate_educational_headline(self):
+        try:
+            base_educational_prompt = "Generate the title for a social media post aiming to educate users on a topic about critical data literacy:"
+            response = openai.Completion.create(
+                engine = "text-davinci-002",
+                prompt = base_educational_prompt,
+                max_tokens = 100,
+                temperature = 0.5,
+                top_p = 1,
+            )
+            generated_educational_headline = response["choices"][0]["text"].strip()
+            self.news_headline = self._extract_headline(generated_educational_headline)
+        except openai.error.OpenAIError as e:
+            print(f"Error generating educational headline: {e}")
+            self.news_headline = None
+
     def _generate_image_prompt(self): # Generates the image prompt using the headline as a prompt
         try:
             base_image_prompt = f"Write a sentence describing the image in an instagram post relating to the financial news headline: {self.news_headline} using the following template: PROMPT: <A [format] of [scene] in the style of [style], [perspective].> You need to replace the parameters in the brackets. Use the following lists to choose from for each one: format: ... style: ... perspective: ... The scene parameter needs to specify an object or subject performing an action. Describe the scenery. Describe the mood and the lighting."
@@ -71,13 +84,30 @@ class Post:
             print(f"Error generating image prompt: {e}")
             self.image_prompt = None
 
+    def _generate_educational_image_prompt(self):
+        try:
+            base_image_prompt = f"Write a sentence describing the image in an educational Instagram post relating to the critical data literacy topic: {self.news_headline} using the following template: PROMPT: <A [format] of [scene] in the style of [style], [perspective].> You need to replace the parameters in the brackets. Use the following lists to choose from for each one: format: ... style: ... perspective: ... The scene parameter needs to specify an object or subject performing an action. Describe the scenery. Describe the mood and the lighting."
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": base_image_prompt}],
+                max_tokens=200,
+                temperature=0.5,
+                top_p=1,
+            )
+
+            generated_image_prompt = response["choices"][0]["message"]["content"]
+            self.image_prompt = self._extract_image_prompt(generated_image_prompt)
+        except openai.error.OpenAIError as e:
+            print(f"Error generating educational image prompt: {e}")
+            self.image_prompt = None
+
     def _generate_post_description(self): # Generates the post description using the headline as a prompt
         try:
             description_prompt = f"Create an Instagram post for the following financial news headline: {self.news_headline} using the following template: DESCRIPTION: <description including hashtags and emojis.>"
             response = openai.ChatCompletion.create( # Generates the post description
                 model = "gpt-3.5-turbo",
                 messages = [{"role": "user", "content": description_prompt}],
-                max_tokens = 200,
+                max_tokens = 250,
                 temperature = 0.5,
                 top_p = 1,
             )
@@ -86,6 +116,23 @@ class Post:
             self.post_description = self._extract_post_description(generated_post_description)
         except openai.error.OpenAIError as e:
             print(f"Error generating post: {e}")
+            self.post_description = None
+
+    def _generate_educational_post_description(self):
+        try:
+            description_prompt = f"Create an Instagram post to educate social media users on the following critical data literacy topic: {self.news_headline} using the following template: DESCRIPTION: <description including hashtags and emojis.>"
+            response = openai.ChatCompletion.create(
+                model = "gpt-3.5-turbo",
+                messages = [{"role": "user", "content": description_prompt}],
+                max_tokens = 250,
+                temperature = 0.5,
+                top_p=1,
+            )
+
+            generated_post_description = response["choices"][0]["message"]["content"]
+            self.post_description = self._extract_post_description(generated_post_description)
+        except openai.error.OpenAIError as e:
+            print(f"Error generating educational post: {e}")
             self.post_description = None
 
     def _generate_image(self): # Generates the image using the image prompt as a prompt
@@ -185,7 +232,7 @@ class Post:
         return image
 
 
-    def save_post(self, output_dir = "generated_posts"):
+    def _save_post(self, output_dir = "generated_posts"):
         try:
             unique_id = int(time.time())
             output_path = Path(output_dir) / str(unique_id)
@@ -194,7 +241,7 @@ class Post:
             sanitized_headline = self.sanitize_filename(self.news_headline)
 
             post_filename = output_path / f"{sanitized_headline[:10]}_post.txt"
-            with open(post_filename, "w", encoding="utf-8") as post_file:
+            with open(post_filename, "w", encoding = "utf-8") as post_file:
                 post_file.write(f"Headline: {self.news_headline}\n\n")
                 post_file.write(f"Image Prompt: {self.image_prompt}\n\n")
                 post_file.write(f"Image URL: {self.image_url}\n\n")
@@ -211,9 +258,24 @@ class Post:
         except Exception as e:
             print(f"Error saving post and image: {e}")
 
-def generate_post(is_educational=False):
-    try:
-        post = Post(is_educational=is_educational)
-        post.save_post()
-    except ValueError as e:
-        print(f"Error generating post: {e}")
+    def _generate_post(self):
+        try:
+            self._generate_headline()
+            self._generate_image_prompt()
+            self._generate_post_description()
+            self._generate_image()
+            self._save_post()
+        except ValueError as e:
+            print(f"Error generating post: {e}")
+    
+    def _generate_educational_post(self):    
+        try:
+            self._generate_educational_headline()
+            self._generate_educational_image_prompt()
+            self._generate_educational_post_description()
+            self._generate_image()
+            self._save_post()
+        except ValueError as e:
+            print(f"Error generating post: {e}")
+
+print(openai.api_key)

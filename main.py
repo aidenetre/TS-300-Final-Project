@@ -4,7 +4,7 @@
 import post
 
 def main():
-    post.generate_post()
+    post.Post(is_educational = True)
 
 if __name__ == "__main__":
     main()

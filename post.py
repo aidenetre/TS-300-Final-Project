@@ -13,11 +13,11 @@ from PIL import Image, ImageDraw, ImageFont
 from datetime import date
 from pathlib import Path
 
-# Set up OpenAI API Key
-openai.api_key = os.getenv("OPENAI_API_KEY") # Set your OpenAI API key here, retrieve from PATH
-
 class Post:
     def __init__(self, is_educational = False):
+        # Set up OpenAI API Key
+        openai.api_key = os.getenv("OPENAI_API_KEY") # Set your OpenAI API key here, retrieve from PATH
+
         self.is_educational = is_educational
         self.news_headline = None
         self.image_prompt = None
@@ -277,5 +277,3 @@ class Post:
             self._save_post()
         except ValueError as e:
             print(f"Error generating post: {e}")
-
-print(openai.api_key)

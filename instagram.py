@@ -8,7 +8,15 @@ from post import Post
 from instagrapi import Client
 
 # Log in to Instagram
-def login_instagram(username, password):
+def login_instagram():
+    # Set your Instagram username and password here
+    username = os.getenv('INSTAGRAM_USERNAME')
+    password = os.getenv('INSTAGRAM_PASSWORD')
+
+    if not username or not password:
+        print("Error: Instagram username or password not found.")
+        return
+
     client = Client()
     client.login(username, password)
     return client
@@ -23,22 +31,15 @@ def post_on_instagram(client, image_path, description):
         print(f"Error posting image and description: {e}")
 
 def main():
-    # Set your Instagram username and password here
-    username = os.getenv('INSTAGRAM_USERNAME')
-    password = os.getenv('INSTAGRAM_PASSWORD')
-
-    if not username or not password:
-        print("Error: Instagram username or password not found.")
-        return
-
-    client = login_instagram(username, password)
-
     # Set the interval between posts (6 hours)
-    interval = 6 * 60 * 60
+    interval = 60 * 60
 
-    post_counter = itertools.count(start = 2)
+    post_counter = itertools.count(start = 4)
 
     while True:
+
+        client = login_instagram()
+
         try:
             # Pass the 'is_educational' argument to the 'generate_post' function
             is_educational = next(post_counter) % 4 == 0

@@ -17,6 +17,7 @@ def login_instagram(username, password):
 def post_on_instagram(client, image_path, description):
     try:
         client.photo_upload(image_path, description)
+        client.photo_upload_to_story(image_path, description)
         print(f"Posted image with description: {description}")
     except Exception as e:
         print(f"Error posting image and description: {e}")
@@ -35,7 +36,7 @@ def main():
     # Set the interval between posts (6 hours)
     interval = 6 * 60 * 60
 
-    post_counter = itertools.count(start = 1)
+    post_counter = itertools.count(start = 2)
 
     while True:
         try:

@@ -1,7 +1,8 @@
-# File: post.py
-# Author: @aidenetre
+# file: post.py
+# author: @aidenetre
+# description: This file contains the Post class that will be used to generate fake news posts
 
-#--- IMPORTS ---#
+#------------------------------------IMPORTS------------------------------------#
 import os
 import openai
 import requests
@@ -13,11 +14,11 @@ from PIL import Image, ImageDraw, ImageFont
 from datetime import date
 from pathlib import Path
 
+# Set up OpenAI API Key
+openai.api_key = os.getenv("OPENAI_API_KEY") # Set your OpenAI API key here, retrieve from PATH
+
 class Post:
     def __init__(self, is_educational = False):
-        # Set up OpenAI API Key
-        openai.api_key = os.getenv("OPENAI_API_KEY") # Set your OpenAI API key here, retrieve from PATH
-
         self.is_educational = is_educational
         self.news_headline = None
         self.image_prompt = None
@@ -26,46 +27,70 @@ class Post:
         self.image = None
         self.image_path = None
 
-        if self.is_educational:
+        if self.is_educational: # Generate an educational post if the 'is_educational' argument is True
             self._generate_educational_post()
         else:
-            self._generate_post()
+            self._generate_post() # Generate a fake news post if the 'is_educational' argument is False
 
         if self.news_headline is None or self.image_prompt is None or self.post_description is None or self.image is None:
-            raise ValueError("Failed to generate content")
+            raise ValueError("Failed to generate content") # Raise an error if the content is not generated
 
     def _generate_headline(self): # Generates the fake news headline using the prompt as a prompt
-        try:
-            today = date.today() # Gets the current date
-            base_news_prompt = f"Generate a current financial news headline for the current date {today}:"
-            response = openai.Completion.create(
-                engine = "text-davinci-002",
-                prompt = base_news_prompt,
-                max_tokens = 100,
-                temperature = 0.5,
-                top_p = 1,
-            )
-            generated_news_headline = response["choices"][0]["text"].strip() # Extracts the fake news headline from the generated post
-            self.news_headline = self._extract_headline(generated_news_headline)
-        except openai.error.OpenAIError as e:
-            print(f"Error generating headline: {e}")
-            self.news_headline = None
+        max_retries = 3 # Maximum number of retries
+        retry_delay = 5 # Delay between retries
 
-    def _generate_educational_headline(self):
-        try:
-            base_educational_prompt = "Generate the title for a social media post aiming to educate users on a topic about critical data literacy:"
-            response = openai.Completion.create(
-                engine = "text-davinci-002",
-                prompt = base_educational_prompt,
-                max_tokens = 100,
-                temperature = 0.5,
-                top_p = 1,
-            )
-            generated_educational_headline = response["choices"][0]["text"].strip()
-            self.news_headline = self._extract_headline(generated_educational_headline)
-        except openai.error.OpenAIError as e:
-            print(f"Error generating educational headline: {e}")
-            self.news_headline = None
+        for attempt in range(max_retries): # Retries if there is an error
+            try:
+                today = date.today() # Gets the current date
+                base_news_prompt = f"Generate a short current financial news headline for the current date, only respond with the headline {today}:"
+                response = openai.ChatCompletion.create(
+                    model = "gpt-3.5-turbo",
+                    messages = [{"role": "user", "content": base_news_prompt}],
+                    max_tokens = 100,
+                    temperature = 0.5,
+                    top_p = 1,
+                )
+
+                generated_news_headline = response["choices"][0]["message"]["content"].strip() # Extracts the fake news headline from the generated post
+                self.news_headline = self._extract_headline(generated_news_headline)
+                break
+            except openai.error.APIConnectionError as e: # Retries if there is an error
+                if attempt < max_retries - 1: # Retries if there is an error
+                    print(f"Error generating headline: {e}. Retrying in {retry_delay} seconds.")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else: # Gives up if there is an error
+                    print(f"Error generating headline: {e}. Giving up after {max_retries} retries.")
+                    self.news_headline = None
+                    break
+
+    def _generate_educational_headline(self): # Generates the educational headline using the prompt as a prompt
+        max_retries = 3 # Maximum number of retries
+        retry_delay = 5 # Delay between retries
+
+        for attempt in range(max_retries): # Retries if there is an error
+            try:
+                base_educational_prompt = "Generate the title for a social media post aiming to educate users on a topic about critical data literacy, only respond with the title :"
+                response = openai.ChatCompletion.create(
+                    model = "gpt-3.5-turbo",
+                    messages = [{"role": "user", "content": base_educational_prompt}],
+                    max_tokens = 100,
+                    temperature = 0.5,
+                    top_p = 1,
+                )
+
+                generated_educational_headline = response["choices"][0]["message"]["content"].strip()
+                self.news_headline = self._extract_headline(generated_educational_headline)
+                break
+            except openai.error.APIConnectionError as e: # Retries if there is an error
+                if attempt < max_retries - 1: # Retries if there is an error
+                    print(f"Error generating headline: {e}. Retrying in {retry_delay} seconds.")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else: # Gives up if there is an error
+                    print(f"Error generating headline: {e}. Giving up after {max_retries} retries.")
+                    self.news_headline = None
+                    break
 
     def _generate_image_prompt(self): # Generates the image prompt using the headline as a prompt
         try:
@@ -84,7 +109,7 @@ class Post:
             print(f"Error generating image prompt: {e}")
             self.image_prompt = None
 
-    def _generate_educational_image_prompt(self):
+    def _generate_educational_image_prompt(self): # Generates the educational image prompt using the headline as a prompt
         try:
             base_image_prompt = f"Write a sentence describing the image in an educational Instagram post relating to the critical data literacy topic: {self.news_headline} using the following template: PROMPT: <A [format] of [scene] in the style of [style], [perspective].> You need to replace the parameters in the brackets. Use the following lists to choose from for each one: format: ... style: ... perspective: ... The scene parameter needs to specify an object or subject performing an action. Describe the scenery. Describe the mood and the lighting."
             response = openai.ChatCompletion.create(
@@ -118,7 +143,7 @@ class Post:
             print(f"Error generating post: {e}")
             self.post_description = None
 
-    def _generate_educational_post_description(self):
+    def _generate_educational_post_description(self): # Generates the educational post description using the headline as a prompt
         try:
             description_prompt = f"Create an Instagram post to educate social media users on the following critical data literacy topic: {self.news_headline} using the following template: DESCRIPTION: <description including hashtags and emojis.>"
             response = openai.ChatCompletion.create(
@@ -156,7 +181,7 @@ class Post:
             self.image = None
 
     @staticmethod
-    def _extract_headline(generated_headline):
+    def _extract_headline(generated_headline): # Extracts the headline from the generated post
         if generated_headline.startswith("nt"):  # Removes the "nt" from the start of the headline
             generated_headline = generated_headline[2:].strip()
             
@@ -167,7 +192,7 @@ class Post:
         return generated_headline  # Returns the headline
 
     @staticmethod
-    def _extract_image_prompt(generated_image_prompt):
+    def _extract_image_prompt(generated_image_prompt): # Extracts the image prompt from the generated post
         try:
             # Find the index of "PROMPT: "
             prompt_index = generated_image_prompt.find("PROMPT: ") + len("PROMPT: ") # Finds the index of "PROMPT: "
@@ -184,7 +209,7 @@ class Post:
             return None
 
     @staticmethod
-    def _extract_post_description(generated_post_description):
+    def _extract_post_description(generated_post_description): # Extracts the post description from the generated post
         try:
             # Find the index of "DESCRIPTION: "
             description_index = generated_post_description.find("DESCRIPTION: ") + len("DESCRIPTION: ") # Finds the index of "DESCRIPTION: "
@@ -200,14 +225,14 @@ class Post:
             print(f"Error extracting post description: {e}")
             return None
         
-    def sanitize_filename(self, filename):
+    def sanitize_filename(self, filename): # Sanitizes the filename to remove any invalid characters
         filename = filename.replace("\n", " ")
         return re.sub(r'[^\w\s]+', '_', filename)
 
-    def resize_image(self, image, size):
+    def resize_image(self, image, size): # Resizes the image to the specified size
         return image.resize(size, Image.ANTIALIAS)
 
-    def add_headline_to_image(self, image, headline, font_path = '/fonts/timesbd.ttf', font_size = 80):
+    def add_headline_to_image(self, image, headline, font_path = '/fonts/timesbd.ttf', font_size = 80): # Adds the headline to the image
         draw = ImageDraw.Draw(image)
         font = ImageFont.truetype(font_path, font_size)
         width, height = image.size
@@ -232,7 +257,7 @@ class Post:
         return image
 
 
-    def _save_post(self, output_dir = "generated_posts"):
+    def _save_post(self, output_dir = "generated_posts"): # Saves the generated post to the specified directory
         try:
             unique_id = int(time.time())
             output_path = Path(output_dir) / str(unique_id)
@@ -258,7 +283,7 @@ class Post:
         except Exception as e:
             print(f"Error saving post and image: {e}")
 
-    def _generate_post(self):
+    def _generate_post(self): # Generates a post
         try:
             self._generate_headline()
             self._generate_image_prompt()
@@ -268,7 +293,7 @@ class Post:
         except ValueError as e:
             print(f"Error generating post: {e}")
     
-    def _generate_educational_post(self):    
+    def _generate_educational_post(self): # Generates an educational post
         try:
             self._generate_educational_headline()
             self._generate_educational_image_prompt()

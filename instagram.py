@@ -32,14 +32,14 @@ def post_on_instagram(client, image_path, description):
         print(f"Posted image with description: {description}")
     except Exception as e: # Catch any errors
         print(f"Error posting image and description: {e}")
-
+ 
 # Main function
 def main():
     # Set the interval between posts (4 hours)
-    interval = 4 * 60
+    interval = 4 * 60 * 60
 
     # Create a counter to keep track of the number of posts between educational posts
-    post_counter = itertools.count(start = 1)
+    post_counter = itertools.count(start = 4)
 
     while True:
         try:  

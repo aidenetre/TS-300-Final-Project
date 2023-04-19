@@ -36,7 +36,7 @@ class Post:
             raise ValueError("Failed to generate content") # Raise an error if the content is not generated
 
     def _generate_headline(self): # Generates the fake news headline using the prompt as a prompt
-        max_retries = 3 # Maximum number of retries
+        max_retries = 10 # Maximum number of retries
         retry_delay = 5 # Delay between retries
 
         for attempt in range(max_retries): # Retries if there is an error
@@ -47,7 +47,7 @@ class Post:
                     model = "gpt-3.5-turbo",
                     messages = [{"role": "user", "content": base_news_prompt}],
                     max_tokens = 100,
-                    temperature = 0.5,
+                    temperature = 0.7,
                     top_p = 1,
                 )
 
@@ -65,7 +65,7 @@ class Post:
                     break
 
     def _generate_educational_headline(self): # Generates the educational headline using the prompt as a prompt
-        max_retries = 3 # Maximum number of retries
+        max_retries = 10 # Maximum number of retries
         retry_delay = 5 # Delay between retries
 
         for attempt in range(max_retries): # Retries if there is an error
@@ -75,7 +75,7 @@ class Post:
                     model = "gpt-3.5-turbo",
                     messages = [{"role": "user", "content": base_educational_prompt}],
                     max_tokens = 100,
-                    temperature = 0.5,
+                    temperature = 0.7,
                     top_p = 1,
                 )
 
@@ -99,7 +99,7 @@ class Post:
                 model = "gpt-3.5-turbo",
                 messages = [{"role": "user", "content": base_image_prompt}],
                 max_tokens = 200,
-                temperature = 0.5,
+                temperature = 0.7,
                 top_p = 1,
             )
 
